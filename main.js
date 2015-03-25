@@ -3,26 +3,46 @@ var request = require('request');
 var fs = require('fs');
 var _ = require('lodash');
 var apiBase = 'https://glosbe.com/gapi/translate?from=nld&dest=eng&format=json';
+var q = require('q');
 
-var preferredAuthor = 'GlosbeResearch';
 var lang = 'en';
-
 var prepositions = ['op','kennis','af','uit','aan','toe','door','voor','dicht','mee','vast'];
 var words = ['halen','bellen','maken','gaan','eten','doen','stellen','zetten','houden','nemen','komen','lopen','leggen','liggen'];
+
+var translations = {
+    // uitdoen: [
+    //    <phrase|meanings>,...
+    // ]
+};
+
+var promises = [];
 
 prepositions.forEach(function(prep) {
     words.forEach(function(word) {
         var werkword = prep + word;
-        console.log('trying ' + werkword);
 
-        /*
         var apiRq = apiBase + '&phrase=' + werkword;
+        var deferred = q.defer();
+
         request(apiRq, function(error, response, body) {
             var result = JSON.parse(body);
-            console.log('    translation for ' + werkword + ': ' + extractTranslation(result, preferredAuthor, lang));
+            var translation = {
+                werkword: werkword,
+                translations: extractTranslations(result, lang)
+            };
+            deferred.resolve(translation);
         });
-        */
+
+        promises.push(deferred.promise);
     });
+});
+
+q.all(promises).then(function(translations) {
+    // filter out empty.
+    var validWords = _.select(translations, function(t) {
+        return t.translations.length > 0;
+    });
+    process.stdout.write(JSON.stringify({translations: validWords}));
 });
 
 /*
@@ -42,20 +62,12 @@ fs.readFile('./oversteken.define', 'utf8', function (err,data) {
 });
 */
 
-function extractTranslation(data, preferredAuthor, lang) {
-    var author, phrase;
+function extractTranslations(data, lang) {
+    var wrapped = _(data.tuc);
 
-    author = _.first(_.pluck(_.select(data.authors, function(author) {
-        return author.N === preferredAuthor;
-    }), 'id'));
-
-    if (!author) {
-        return false;
-    }
-
-    translation = _.first(_.select(data.tuc, function(result) {
-        return _.includes(result.authors, author) && result.phrase && result.phrase.language === lang;
-    }));
-
-    return translation && translation.phrase && translation.phrase.text;
+    return wrapped.select(function(result) {
+        return result.phrase && result.phrase.language === lang;
+    }).map(function(translation) {
+        return (translation.phrase && translation.phrase.text);
+    }).value();
 }
