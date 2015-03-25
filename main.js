@@ -9,12 +9,6 @@ var lang = 'en';
 var prepositions = ['op','kennis','af','uit','aan','toe','door','voor','dicht','mee','vast'];
 var words = ['halen','bellen','maken','gaan','eten','doen','stellen','zetten','houden','nemen','komen','lopen','leggen','liggen'];
 
-var translations = {
-    // uitdoen: [
-    //    <phrase|meanings>,...
-    // ]
-};
-
 var promises = [];
 
 prepositions.forEach(function(prep) {
@@ -44,23 +38,6 @@ q.all(promises).then(function(translations) {
     });
     process.stdout.write(JSON.stringify({translations: validWords}));
 });
-
-/*
-request(api, function(error, response, body) {
-    console.log(JSON.parse(body));
-});
-*/
-
-/*
-fs.readFile('./oversteken.define', 'utf8', function (err,data) {
-    if (err) {
-        return console.log(err);
-    }
-
-    var result = JSON.parse(data);
-    console.log(extractTranslation(result, preferredAuthor, lang));
-});
-*/
 
 function extractTranslations(data, lang) {
     var wrapped = _(data.tuc);
